@@ -1,0 +1,130 @@
+//*********************************
+// I DID NOT MAKE THIS  AA SCRIPT *
+//  All credits go to Dark Byte   *
+//*********************************
+
+//mono_assembly_foreach
+//mono_assembly_getimage
+
+
+alloc(bla, 2048)
+alloc(dllpath, 256);
+
+alloc(domain,4)
+alloc(image,4)
+alloc(classdef,4)
+alloc(classobject, 4)
+alloc(methodDesc,4)
+alloc(method,4)
+
+registersymbol(domain)
+registersymbol(image)
+registersymbol(classdef)
+registersymbol(classobject)
+registersymbol(methodDesc)
+registersymbol(method)
+
+alloc(result,4)
+registersymbol(result)
+alloc(result2,4)
+registersymbol(result2)
+
+alloc(namespacetocall,64)
+alloc(classtocall,64)
+alloc(voidtocall,64)
+
+alloc(params, 32)
+alloc(exception,4)
+
+registersymbol(exception)
+
+namespacetocall: // The namespace of your module
+db 'Woodland',0
+
+classtocall: // The class that your loading void will be held. Exemple, Class "Loader" will hold the void "Load"
+db 'Loader',0
+
+voidtocall: // The void to call on load, This is to be used with something that will create your GameObject.
+db '*:Load',0
+
+dllpath: // Path to your C# dll
+db 'PATH TO DLL <------',0
+
+
+
+bla:
+//foreach domain is useful too
+call mono.mono_get_root_domain
+mov [domain],eax
+
+push eax
+call mono.mono_thread_attach
+add esp,4
+
+push dllpath
+push [domain]
+call mono.mono_domain_assembly_open
+add esp,8
+
+push eax
+call mono.mono_assembly_get_image
+add esp,4
+
+mov [image],eax
+
+push classtocall
+push namespacetocall
+push eax
+call mono.mono_class_from_name
+add esp, c
+
+mov [classdef],eax
+
+//create a class
+push eax //classdef
+push [domain]
+call mono.mono_object_new
+add esp, 8
+
+mov [classobject],eax
+
+push eax
+call mono.mono_runtime_object_init //execute the nameless constructor (if there is one)
+add esp,4
+
+//find the method
+
+push 0
+push voidtocall
+call mono.mono_method_desc_new
+add esp,8
+
+mov [methodDesc], eax
+
+push [classdef]
+push eax
+call mono.mono_method_desc_search_in_class
+add esp,8
+mov [method], eax
+
+mov [params],0
+
+push exception
+push params //no params
+push [classobject]
+push eax //[method]
+call mono.mono_runtime_invoke
+add esp,10
+
+mov [result],eax
+
+
+ret
+
+result:
+dd 0
+
+result2:
+dd 0
+
+createthread(bla)
